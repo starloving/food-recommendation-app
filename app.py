@@ -2,6 +2,23 @@
 from flask import Flask, request, jsonify, current_app, session
 import pymysql
 from flask_cors import *
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from PIL import Image
+import io
+
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+import torchvision
+from torchvision import datasets, models, transforms
+
+import numpy as np
+import time
+
+
 
 app = Flask(__name__)
 CORS(app, resources=r'*')
@@ -13,6 +30,29 @@ app.config['DBPORT'] = 3306
 app.config['SECRET_KEY'] = 'test123ASLDFJKLJK1JKL23JKLd123b'
 
 response_template = {'code':200, 'msg':'',  'data':''}
+class_names = ['감자탕', '김치찌개', '냉면']  # 수정사항
+
+
+device = torch.device('cpu') # device 객체
+
+model = torch.load("model_2.pt")
+model = model.to(device)
+transforms_test = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
+
+def get_prediction(image_bytes):
+    image = Image.open(io.BytesIO(image_bytes))
+    image = transforms_test(image).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        outputs = model(image)
+        _, preds = torch.max(outputs, 1)
+
+    return class_names[preds[0]]
+
 
 @app.route('/user/login', methods=['POST'])
 def login():
@@ -91,6 +131,17 @@ def logout():
 @app.route('/health')
 def health():
     return jsonify({'code':200, 'msg':'hi',  'data':'' })
+@app.route('/predict')
+def predict():
+    if request.method == 'POST':
+        # 이미지 바이트 데이터 받아오기
+        file = request.files['file']
+        image_bytes = file.read()
+
+        # 분류 결과 확인 및 클라이언트에게 결과 반환
+        class_name = get_prediction(image_bytes=image_bytes)
+        print("결과:", {'class_name': class_name})
+        return jsonify({'class_name': class_name})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
