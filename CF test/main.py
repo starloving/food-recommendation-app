@@ -3,14 +3,28 @@ import random
 import pandas as pd
 from collections import defaultdict
 from operator import itemgetter
+import pymysql
+import numpy as np
 
-def LoadMovieLensData(filepath, train_rate):
+def LoadMovieLensData(train_rate):
     """
     데이터 읽기 및 User-Item 테이블 만들기
     """
+    conn = pymysql.connect(
+    host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+    user = 'admin',
+    password = '1q2w3e4r',
+    db = 'userdb',
+    charset = 'utf8'
+    )
+    cur = conn.cursor()
+    sql = "select * from item order by UserID"
+    cur.execute(sql)
+    result = cur.fetchall()
+    conn.commit()
+    conn.close()
 
-    ratings = pd.read_table(filepath, sep="::", header=None, names=["UserID", "FoodID"],
-                            engine='python')
+    ratings = pd.DataFrame(data = result, columns= ['UserID','FoodID'])
     ratings = ratings[['UserID', 'FoodID']]
     train = []
     test = []
@@ -110,13 +124,23 @@ def write_user_data(UserID,FoodID):
     """
     사용자 파일에 새 데이터 쓰기
     """
-    f = open("data.csv",mode="a",encoding="utf-8",newline="")
-    lst = []
-    for i in FoodID:
-        lst.append(f"{UserID}::{i}")
-    for i in lst:
-        f.write(i)
-        f.write("\n")
+    
+    conn = pymysql.connect(
+    host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+    user = 'admin',
+    password = '1q2w3e4r',
+    db = 'userdb',
+    charset = 'utf8'
+    )
+    cur = conn.cursor()
+    for ID in FoodID :
+
+        sql = "insert into item (UserId, FoodId) values ('" +str(UserID)+"',' "+ str(ID) + " ') " 
+        cur.execute(sql)
+    
+    conn.commit()    
+    conn.close()
+
     return "success"
 
 
@@ -131,14 +155,27 @@ if __name__ == "__main__":
 
     FoodID = list(map(int, input("please input FoodID:").split(",")))
 
-    write_user_data(UserID,FoodID)
-    train, test = LoadMovieLensData("data.csv", 0.8)
+#   write_user_data(UserID,FoodID)
+
+    train, test = LoadMovieLensData(0.8)
     UserCF = UserCF(train)
     UserCF.train()
-    f1 = pd.read_csv("food.csv")
-
+    conn = pymysql.connect(
+        host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+        user = 'admin',
+        password = '1q2w3e4r',
+        db = 'fooddb',
+        charset = 'utf8'
+        )
+    cur = conn.cursor()
     # 사용자에게 각각 5개의 음식 추천
+    rmlist = []
     for i in UserCF.recommend(int(UserID), 5, 8).keys():
-        sr = pd.Series(f1.loc[i])
-        print(sr.to_json(force_ascii=False))
-
+        
+        sql = "select name from food where FoodID =" + str(i)        
+        cur.execute(sql)
+        rmlist.append(cur.fetchall()[0][0])
+    conn.close()
+        
+        
+    print(rmlist)    
