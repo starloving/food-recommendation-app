@@ -26,6 +26,7 @@ def LoadMovieLensData(train_rate):
 
     ratings = pd.DataFrame(data = result, columns= ['UserID','FoodID'])
     ratings = ratings[['UserID', 'FoodID']]
+    print(ratings)
     train = []
     test = []
     random.seed(3)
@@ -114,7 +115,7 @@ class UserCF(object):
                     continue
                 recommends.setdefault(item, 0.)
                 recommends[item] += sim
-        # 추천된 아이템의 유사도에 따라 역순으로 배열한 후 이전 N개 아이템을 사용자에게 추천
+        # 추천된 아이템의 유사도에 따라 역순으로 배열한 후  이전 N개 아이템을 사용자에게 추천
         return dict(sorted(recommends.items(), key=itemgetter(1), reverse=True)[:N])
 
     def train(self):
@@ -150,10 +151,29 @@ if __name__ == "__main__":
         예제： 
             UserID input：12
             FoodID output：1567,2564,6358,1896,2689,2515,6984,6581,11035
-        '''
-    UserID = input("please input UserID:")
+    '''
+    username = str(input("please input UserID:")) #session id
+ 
+#   UserID = session['username']
+    conn = pymysql.connect(
+    host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+    user = 'admin',
+    password = '1q2w3e4r',
+    db = 'userdb',
+    charset = 'utf8'
+    )
+    cur = conn.cursor()
+    sql = "select UserID from user where username = '" + username + "'"
+    cur.execute(sql)
+    UserID = cur.fetchall()[0][0]
+    query = "select FoodID from item where UserID = " + str(UserID)
+    cur.execute(query)
+    fooddata = cur.fetchall()
+    conn.close()
+    FoodID = np.array(fooddata).transpose().tolist()[0]
 
-    FoodID = list(map(int, input("please input FoodID:").split(",")))
+#   FoodID = list(map(int, input("please input FoodID:").split(","))) # db connent
+#   sql = "select FoodId from item where UserID =" +UserID
 
 #   write_user_data(UserID,FoodID)
 
@@ -176,6 +196,6 @@ if __name__ == "__main__":
         cur.execute(sql)
         rmlist.append(cur.fetchall()[0][0])
     conn.close()
-        
-        
+    
+    print(UserCF._userSimMatrix)
     print(rmlist)    

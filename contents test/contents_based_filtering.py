@@ -9,12 +9,15 @@ def cosine_sim(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * (np.linalg.norm(b)))
 
 def Loadfooddataeset (input_food_list):
+    '''
+    
+    '''
     #data base 접근
     conn = pymysql.connect(
         host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
         user = 'admin',
         password = '1q2w3e4r',
-        db = 'food_info',
+        db = 'food',
         charset = 'utf8'
     )
     cur =conn.cursor()
@@ -74,31 +77,49 @@ def Loadfoodfeature(input_food_list) :
 
     return input_food_feature
 
-#input
-"""
-input_list 수정바람
-"""
-input_list = ['감자탕','마라탕','냉면'] 
+# input = ['감자탕','마라탕','냉면'] 
+
+def foodrm (input_list) :
+    '''
+        input : food name list
+    '''
+
+    if ( len(input_list) == 0 ) : 
+        return rmlist , urllist
+
+    df = Loadfooddataeset(input_list)
+    food_feature = Loadfoodfeature(input_list)
 
 
+    # { 음식이름 : 코사인 유사도 } 사전생성
+    f_dict = dict()
+    indexes = df.index
+    for index in indexes :
+        f_dict.update({index : cosine_sim(food_feature, np.array(df.loc[index], dtype = np.float64))})
 
-df = Loadfooddataeset(input_list)
-food_feature = Loadfoodfeature(input_list)
+    rank = sorted(f_dict.items(), key = (lambda x:x[1]), reverse =True)
+
+    conn = pymysql.connect(
+        host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+        user = 'admin',
+        password = '1q2w3e4r',
+        db = 'food',
+        charset = 'utf8'
+    )
+    cur =conn.cursor()
+
+    #코사인 유사도 value 기준으로  reverse sort
 
 
-# { 음식이름 : 코사인 유사도 } 사전생성
-f_dict = dict()
-indexes = df.index
-for index in indexes :
-    f_dict.update({index : cosine_sim(food_feature, np.array(df.loc[index], dtype = np.float64))})
+    #상위 3개 list 반환 
+    rmlist = np.array(rank[:5]).transpose()[0].tolist()
+    urllist = []
+    
+    
+    for name in rmlist :
+        sql = "select url from food where name =" + name
+        cur.execute(sql)
+        urllist.append(cur.fetchall()[0][0])    
+    
 
-## print(f_dict)
-
-#코사인 유사도 value 기준으로  reverse sort
-rank = sorted(f_dict.items(), key = (lambda x:x[1]), reverse =True)
-
-
-#상위 3개 list 반환 
-rmfood = np.array(rank[:3]).transpose()[0].tolist()
-
-print (rmfood)
+    return rmlist, urllist

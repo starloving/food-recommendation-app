@@ -17,7 +17,8 @@ from torchvision import datasets, models, transforms
 
 import numpy as np
 import time
-
+import collaborative_filtering as cf
+import food_predict as fp
 
 
 app = Flask(__name__)
@@ -30,28 +31,6 @@ app.config['DBPORT'] = 3306
 app.config['SECRET_KEY'] = 'test123ASLDFJKLJK1JKL23JKLd123b'
 
 response_template = {'code':200, 'msg':'',  'data':''}
-class_names = ['감자탕', '김치찌개', '냉면']  # 수정사항
-
-
-device = torch.device('cpu') # device 객체
-
-model = torch.load("model_2.pt")
-model = model.to(device)
-transforms_test = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
-
-def get_prediction(image_bytes):
-    image = Image.open(io.BytesIO(image_bytes))
-    image = transforms_test(image).unsqueeze(0).to(device)
-
-    with torch.no_grad():
-        outputs = model(image)
-        _, preds = torch.max(outputs, 1)
-
-    return class_names[preds[0]]
 
 
 @app.route('/user/login', methods=['POST'])
@@ -90,7 +69,7 @@ def register():
     if request.method == 'POST':
         db = pymysql.connect(
                 host = current_app.config.get('DBHOST'),
-                port = current_app.config.get('DBPORT') ,
+                port = current_app.config.get('DBPORT'),
                 user = current_app.config.get('DBUSER'),
                 password = current_app.config.get('DBPWD'),
                 database = current_app.config.get('DBNAME')
@@ -100,13 +79,16 @@ def register():
         username = data['username']
         password = data['password']
         password2 = data['password2']
-      
+        gender = data['gender']
+        age = data['age']
+    
         if password != password2:
             return jsonify({'code':502, 'msg':'Two password not matched, please check!',  'data':''})
+        
         querysql = "select * from user where username='"+ username+"' and password='"+ password +"'"
-        sql = "INSERT INTO user (username, password) VALUES ('"+ username +"', '"+ password +"')"
-           
-        try: 
+        # sql = "INSERT INTO user (username, password, gender, age) VALUES ('"+ username +"', '"+ password +"', '"+ gender +"', '"+ age +"')"  
+        findmax = 'select max(UserID) from user'
+        try :    
             cursor = db.cursor()
             cursor.execute(querysql)
             results = cursor.fetchall()
@@ -114,7 +96,10 @@ def register():
                 db.close()
                 return jsonify({'code':500, 'msg':'user exists already, please check',  'data': '' })
             else:
-                cursor.execute(sql)
+                cursor.execute(findmax)
+                num = cursor.fetchall()[0][0]
+                sql = "INSERT INTO user (UserID ,username, password, gender, age) VALUES ('"+ str(num)+ "', '" + username +"', '"+ password +"', '"+ gender +"', '"+ age +"')"  
+                cursor.excute(sql)
                 db.commit()
                 session['username'] = username
                 return jsonify({'code':200, 'msg':'user is created successfully',  'data': {'username':username} })
@@ -131,7 +116,7 @@ def logout():
 @app.route('/health')
 def health():
     return jsonify({'code':200, 'msg':'hi',  'data':'' })
-@app.route('/predict')
+@app.route('/predict', methods =['POST']) 
 def predict():
     if request.method == 'POST':
         # 이미지 바이트 데이터 받아오기
@@ -139,9 +124,16 @@ def predict():
         image_bytes = file.read()
 
         # 분류 결과 확인 및 클라이언트에게 결과 반환
-        class_name = get_prediction(image_bytes=image_bytes)
+        class_name = fp.get_prediction(image_bytes=image_bytes)
         print("결과:", {'class_name': class_name})
         return jsonify({'class_name': class_name})
-
+@app.route('/cfalgorithm')
+def cfalgorithm() :
+    username = session['username']
+    rmlist = cf.foodrm(username)
+    return jsonify({'rmlist' : rmlist})
+@app.route('/CBFalgorithm')
+def CBFalgorithm() :
+    return 0
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
