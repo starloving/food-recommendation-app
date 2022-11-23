@@ -121,28 +121,28 @@ def PreProcessData(originData):
     return trainData
 
 
-def write_user_data(UserID,FoodID):
-    """
-    사용자 파일에 새 데이터 쓰기
-    """
-    
-    conn = pymysql.connect(
-    host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
-    user = 'admin',
-    password = '1q2w3e4r',
-    db = 'userdb',
-    charset = 'utf8'
-    )
-    cur = conn.cursor()
-    for ID in FoodID :
-
-        sql = "insert into item (UserId, FoodId) values ('" +str(UserID)+"',' "+ str(ID) + " ') " 
-        cur.execute(sql)
-    
-    conn.commit()    
-    conn.close()
-
-    return "success"
+#def write_user_data(UserID,FoodID):
+#    """
+#    사용자 파일에 새 데이터 쓰기
+#    """
+#    
+#    conn = pymysql.connect(
+#    host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+#    user = 'admin',
+#    password = '1q2w3e4r',
+#    db = 'userdb',
+#    charset = 'utf8'
+#    )
+#    cur = conn.cursor()
+#    for ID in FoodID :
+#
+#        sql = "insert into item (UserId, FoodId) values ('" +str(UserID)+"',' "+ str(ID) + " ') " 
+#        cur.execute(sql)
+#    
+#    conn.commit()    
+#    conn.close()
+#
+#    return "success"
 
 def foodrm(username):
     '''
