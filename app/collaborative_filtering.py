@@ -168,6 +168,10 @@ def foodrm(username):
     query = "select FoodID from item where UserID = " + str(UserID)
     cur.execute(query)
     fooddata = cur.fetchall()
+
+    if (len(fooddata) == 0 ) :
+        conn.close()
+        return [], [], [], []
     conn.close()
     
     FoodID = np.array(fooddata).transpose().tolist()[0]
@@ -193,13 +197,18 @@ def foodrm(username):
     # 사용자에게 각각 5개의 음식 추천
     rmlist = []
     urllist = []
+    kcal = []
+    comment = []
     for i in User.recommend(int(UserID), 5, 8).keys():
         
-        sql = "select name, url from food where FoodID =" + str(i)        
+        sql = "select name, url,kcal, comment from food where FoodID =" + str(i)        
         cur.execute(sql)
         data = cur.fetchall()
         rmlist.append(data[0][0])
         urllist.append(data[0][1])
+        kcal.append(data[0][2])
+        comment.append(data[0][3])
+
     conn.close()
     
     return rmlist, urllist    

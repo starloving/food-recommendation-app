@@ -81,7 +81,7 @@ def foodrm (input_list) :
         input : food name list
     '''
     if ( len(input_list) == 0 ) : 
-        return [] , []
+        return [] , [], [] , []
 
     df = Loadfooddataset(input_list)
     food_feature = Loadfoodfeature(input_list)
@@ -108,12 +108,18 @@ def foodrm (input_list) :
     #상위 3개 list 반환 
     rmlist = np.array(rank[:5]).transpose()[0].tolist()
     urllist = []
+    kcal  = []
+    comment = []
     
     for name in rmlist :
-        sql = "select url from food where name =" + "'" + name +"'"
+        sql = "select url,kcal,comment from food where name =" + "'" + name +"'"
         cur.execute(sql)
-        urllist.append(cur.fetchall()[0][0])    
+        data = cur.fetchall()
+        urllist.append(data[0][0])
+        kcal.append(data[0][1])
+        comment.append(data[0][2])
+            
     
     conn.close()
 
-    return rmlist, urllist
+    return rmlist, urllist, kcal, comment

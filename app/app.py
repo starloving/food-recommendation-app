@@ -141,9 +141,44 @@ def updateitem():
         username = data['username']
         selectedfoodlist = data['selectedfoodlist']
         # db connect food, user
+        db = pymysql.connect(
+                host = current_app.config.get('DBHOST'),
+                port = current_app.config.get('DBPORT'),
+                user = current_app.config.get('DBUSER'),
+                password = current_app.config.get('DBPWD'),
+                database = current_app.config.get('DBNAME')
+                )
+        fdb = pymysql.connect(
+                host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+                user = 'admin',
+                password = '1q2w3e4r',
+                db = 'fooddb',
+                charset = 'utf8'
+                )
         # find user id
+        cursor = db.cursor()
+        cur = fdb.cursor()
+
+        query = "select UserID from user where name =" + "'" + username + "'"
+        cursor.execute(query)
+        userid = cursor.fetchall()[0][0]
+
         # find food id
+        for food in selectedfoodlist :
+
+            query = "select FoodID from food where naem = " + "'" + food + "'"
+            cur.execute(query)
+            foodid = cur.fetchall()[0][0]
+
+            
         # insert food id into user id
+            insertqeury = "insert into item (UserID, FoodID ) values (" + "'" + str(userid) + "' , '" + str(foodid) + "')"
+            cursor.execute(insertqeury)
+        db.commit()
+        
+        db.close()
+        fdb.close()
+        
         return jsonify({'code': 200, 'msg' : 'items are updated'})
 @app.route('/health')
 def health():
@@ -159,20 +194,24 @@ def predict():
         return jsonify({'class_name': class_name})
 @app.route('/cfalgorithm', methods=['POST'])
 def cfalgorithm() :
-    data = request.get_json()
-    username = data['username']
-    rmlist, urllist = cf.foodrm(username)
-    kcal = [ 10, 50, 100, 150, 200 ]
-    comment = ['test1','test2','test3','test4', 'test5']
-    return jsonify({'rmlist' : rmlist, 'urllist' : urllist, 'kcal' : kcal, 'comment': comment})
+    if request.method == 'POST' :
+        data = request.get_json()
+        username = data['username']
+        rmlist, urllist, kcal, comment = cf.foodrm(username)
+
+        return jsonify({'rmlist' : rmlist, 'urllist' : urllist, 'kcal' : kcal, 'comment': comment})
+    else :
+        return jsonify({'msg' : 'CFalgorithm Error'})
+
 @app.route('/CBFalgorithm', methods=['POST'])
 def CBFalgorithm() :
-    data = request.get_json()
-    input_list = data['food_list']
-    rmlist, urllist = cbf.foodrm(input_list)
-    kcal = [20, 60, 110, 160, 210]
-    comment = ['test01','test02','test03','test04','test05']
-    return jsonify({'rmlist' : rmlist, 'urllist' : urllist, 'kcal' : kcal, 'comment': comment})
+    if request.method == 'POST' :
+        data = request.get_json()
+        input_list = data['food_list']
+        rmlist, urllist, kcal, comment = cbf.foodrm(input_list)
+        return jsonify({'rmlist' : rmlist, 'urllist' : urllist, 'kcal' : kcal, 'comment': comment})
+    else :
+        return jsonify({'msg' : 'CBFalgorithm Error'})
 @app.route('/satisfaction' , methods = ['POST'])
 def satisfaction() :
     if request.method == 'POST' :
@@ -182,7 +221,20 @@ def satisfaction() :
         msg = data['msg']
 
         # connect satisfaction db
+        sdb = pymysql.connect(
+            host='foodrm.cgnnqocprf5c.us-east-1.rds.amazonaws.com',
+            user = 'admin',
+            password = '1q2w3e4r',
+            db = 'satisfydb',
+            charset = 'utf8'
+            )
+        scur = sdb.cursor()
         # insert data 
+        query = "insert into satisfy (satisfy, rating, msg ) values ( "+ str(satisfy) + "," + str(ratings) + ", '" + msg + "')" 
+        scur.execute()
+        sdb.commit()
+        sdb.close()
+        
         # close db
         return jsonify({'code' : 200 , 'msg' : 'satisfaction updated'})
 if __name__ == '__main__':
