@@ -211,4 +211,4 @@ def foodrm(username):
 
     conn.close()
     
-    return rmlist, urllist    
+    return rmlist, urllist ,kcal, comment   

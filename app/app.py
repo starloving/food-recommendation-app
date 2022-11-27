@@ -159,21 +159,22 @@ def updateitem():
         cursor = db.cursor()
         cur = fdb.cursor()
 
-        query = "select UserID from user where name =" + "'" + username + "'"
+        query = "select UserID from user where username =" + "'" + username + "'"
         cursor.execute(query)
         userid = cursor.fetchall()[0][0]
 
         # find food id
         for food in selectedfoodlist :
 
-            query = "select FoodID from food where naem = " + "'" + food + "'"
+            query = "select FoodID from food where name = " + "'" + food + "'"
             cur.execute(query)
             foodid = cur.fetchall()[0][0]
 
             
         # insert food id into user id
-            insertqeury = "insert into item (UserID, FoodID ) values (" + "'" + str(userid) + "' , '" + str(foodid) + "')"
+            insertqeury = "insert into item (UserID, FoodID ) values (" + str(userid) + "," + str(foodid) + ")"
             cursor.execute(insertqeury)
+        
         db.commit()
         
         db.close()
@@ -231,7 +232,7 @@ def satisfaction() :
         scur = sdb.cursor()
         # insert data 
         query = "insert into satisfy (satisfy, rating, msg ) values ( "+ str(satisfy) + "," + str(ratings) + ", '" + msg + "')" 
-        scur.execute()
+        scur.execute(query)
         sdb.commit()
         sdb.close()
         
